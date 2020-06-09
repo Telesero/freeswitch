@@ -2467,6 +2467,53 @@ static switch_status_t hanguphook(switch_core_session_t *session)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+
+static void base_set (switch_core_session_t *session, const char *data, switch_stack_t stack)
+{
+	char *var, *val = NULL;
+	const char *what = "SET";
+
+	switch (stack) {
+	case SWITCH_STACK_PUSH:
+		what = "PUSH";
+		break;
+	case SWITCH_STACK_UNSHIFT:
+		what = "UNSHIFT";
+		break;
+	default:
+		break;
+	}
+
+	if (zstr(data)) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "No variable name specified.\n");
+	} else {
+		switch_channel_t *channel = switch_core_session_get_channel(session);
+
+		var = switch_core_session_strdup(session, data);
+
+		if (!(val = strchr(var, '='))) {
+			val = strchr(var, ',');
+		}
+
+		if (val) {
+			*val++ = '\0';
+			if (zstr(val)) {
+				val = NULL;
+			}
+		}
+
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "%s %s [%s]=[%s]\n",
+						  what, switch_channel_get_name(channel), var, val ? val : "UNDEF");
+
+		switch_channel_add_variable_var_check(channel, var, val, SWITCH_FALSE, stack);
+
+	}
+}
+
+SWITCH_STANDARD_APP(set_function) {
+	base_set(session, data, SWITCH_STACK_BOTTOM);
+}
+
 SWITCH_STANDARD_APP(fifo_track_call_function)
 {
 	switch_channel_t *channel = switch_core_session_get_channel(session);
@@ -4904,6 +4951,10 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_fifo_extended_load)
 	/* connect my internal structure to the blank pointer passed to me */
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
 	SWITCH_ADD_APP(app_interface, "fifo", "Park with FIFO", FIFO_DESC, fifo_function, FIFO_USAGE, SAF_NONE);
+
+	SWITCH_ADD_APP(app_interface, "set_raw", "Set a raw channel variable", "", set_function, "<varname>=<value>",
+SAF_SUPPORT_NOMEDIA | SAF_ROUTING_EXEC | SAF_ZOMBIE_EXEC);
+
 	SWITCH_ADD_APP(app_interface, "fifo_track_call", "Count a call as a fifo call in the manual_calls queue",
 				   "", fifo_track_call_function, "<fifo_outbound_uuid>", SAF_SUPPORT_NOMEDIA);
 	SWITCH_ADD_API(commands_api_interface, "fifo", "Return data about a fifo", fifo_api_function, FIFO_API_SYNTAX);
