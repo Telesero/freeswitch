@@ -3251,7 +3251,7 @@ SWITCH_STANDARD_APP(fifo_function)
 				switch_channel_t *other_channel = switch_core_session_get_channel(other_session);
 				switch_caller_profile_t *originator_cp, *originatee_cp;
 				const char *o_announce = NULL;
-				const char *record_template = switch_channel_get_variable(channel, "fifo_record_template");
+				const char *record_template = switch_channel_get_variable(other_channel, "fifo_record_template");
 				char *expanded = NULL;
 				char *sql = NULL;
 				long epoch_start, epoch_end;
