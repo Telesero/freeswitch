@@ -1075,17 +1075,13 @@ static int node_idle_consumers(fifo_node_t *node)
 	switch_core_session_t *session;
 	switch_channel_t *channel;
 	int total = 0;
-	const char *bridge_uuid_wait = NULL;
 
 	switch_mutex_lock(node->mutex);
 	for (hi = switch_core_hash_first(node->consumer_hash); hi; hi = switch_core_hash_next(&hi)) {
 		switch_core_hash_this(hi, &var, NULL, &val);
 		session = (switch_core_session_t *) val;
 		channel = switch_core_session_get_channel(session);
-
-		bridge_uuid_wait = switch_channel_get_variable(channel, "fifo_bridge_uuid_wait");
-
-		if (!switch_true(bridge_uuid_wait) && !switch_channel_test_flag(channel, CF_BRIDGED)) {
+		if (!switch_channel_test_flag(channel, CF_BRIDGED)) {
 			total++;
 		}
 	}
