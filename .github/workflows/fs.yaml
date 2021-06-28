@@ -19,6 +19,7 @@ jobs:
   build:
     needs: [cleaner]
     runs-on: [self-hosted, freeswitch]
+    if: "!contains(github.event.head_commit.message, 'version bump to')"
 
     #src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
     steps:
@@ -33,9 +34,22 @@ jobs:
     - name: make mod_fifo_extended
       run: make mod_fifo_extended
 
-    - name: Release
+    - name: Bump version and push tag
+      id: changelog
+      uses: TriPSs/conventional-changelog-action@v3
+      with:
+        version-file: './mod_fifo_extended.version'
+        github-token: ${{ secrets.github_token }}
+        git-message: 'version bump to: {version}'
+        preset: 'angular'
+        tag-prefix: 'mod_fifo_extended-'
+        skip-on-empty: 'false'
+
+    - name: Create Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
+      if: ${{ steps.changelog.outputs.skipped == 'false' }}
+      name: ${{ steps.changelog.outputs.tag }}
+      tag_name: ${{ steps.changelog.outputs.tag }}
       with:
           files: src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
       env:
