@@ -38,7 +38,7 @@ jobs:
       id: changelog
       uses: TriPSs/conventional-changelog-action@v3
       with:
-        version-file: './mod_fifo_extended.version'
+        version-file: './mod_fifo_extended.json'
         github-token: ${{ secrets.github_token }}
         git-message: 'version bump to: {version}'
         preset: 'angular'
