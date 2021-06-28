@@ -1,0 +1,23 @@
+name: Freeswitch CI
+
+on:
+  push:
+    branches: [ v1.10 ]
+  pull_request:
+    branches: [ v1.10 ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    #src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: bootstra
+      run: ./bootstrap.sh
+    - name: configure
+      run: ./configure
+    - name: make mod_fifo_extended
+      run: make mod_fifo_extended
