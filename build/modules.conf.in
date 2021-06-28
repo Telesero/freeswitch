@@ -20,6 +20,7 @@ applications/mod_esf
 #applications/mod_esl
 applications/mod_expr
 applications/mod_fifo
+applications/mod_fifo_extended
 #applications/mod_fsk
 applications/mod_fsv
 applications/mod_hash
