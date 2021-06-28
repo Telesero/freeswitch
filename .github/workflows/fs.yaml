@@ -7,15 +7,24 @@ on:
     branches: [ v1.10 ]
 
 jobs:
+
+  cleaner:
+    runs-on: [self-hosted, freeswitch]
+    steps:
+      - name: Runner workspace path
+        run: |
+          echo "Cleaning up previous run"
+          rm -rf "${{ github.workspace }}"
+          
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, freeswitch]
 
     #src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
     
     steps:
     - uses: actions/checkout@v2
-    - name: bootstra
+    - name: bootstrap
       run: ./bootstrap.sh
     - name: configure
       run: ./configure
