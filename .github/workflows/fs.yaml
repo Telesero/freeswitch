@@ -48,9 +48,9 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: ${{ steps.changelog.outputs.skipped == 'false' }}
-      name: ${{ steps.changelog.outputs.tag }}
-      tag_name: ${{ steps.changelog.outputs.tag }}
       with:
+          name: ${{ steps.changelog.outputs.tag }}
+          tag_name: ${{ steps.changelog.outputs.tag }}
           files: src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
       env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
