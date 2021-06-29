@@ -1,4 +1,8 @@
-## 1.0.1 (2021-06-28)
+## [1.0.2](https://github.com/Telesero/freeswitch/compare/mod_fifo_extended-1.0.1...mod_fifo_extended-1.0.2) (2021-06-29)
+
+
+
+## [1.0.1](https://github.com/Telesero/freeswitch/compare/70af6013606120b68e86664889b8fdd282535edf...mod_fifo_extended-1.0.1) (2021-06-28)
 
 
 ### Reverts
