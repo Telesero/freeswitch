@@ -2318,7 +2318,7 @@ static void pres_event_handler(switch_event_t *event)
 	switch_safe_free(dup_node_name);
 }
 
-static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32_t priority)
+static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32_t priority, const char *uuid)
 {
 	fifo_node_t *node;
 	switch_event_t *call_event;
@@ -2342,6 +2342,7 @@ static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32
 
 	switch_event_create(&call_event, SWITCH_EVENT_CHANNEL_DATA);
 	switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-url", url);
+	if (uuid) { switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-uuid", url); }
 
 	fifo_queue_push(node->fifo_list[priority], call_event);
 	call_event = NULL;
@@ -2362,7 +2363,7 @@ SWITCH_STANDARD_API(fifo_check_bridge_function)
 
 SWITCH_STANDARD_API(fifo_add_outbound_function)
 {
-	char *data = NULL, *argv[4] = { 0 };
+	char *data = NULL, *argv[5] = { 0 };
 	int argc;
 	uint32_t priority = 0;
 
@@ -2383,7 +2384,11 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 		}
 	}
 
-	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority));
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+					"FIFO %s new outbound call added, priority== %d, unique-id== %s, dial-url== %s \n", argv[0],
+					priority, argv[3], argv[1]);
+
+	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority, argv[3]));
 
 	free(data);
 	return SWITCH_STATUS_SUCCESS;
@@ -3120,6 +3125,10 @@ SWITCH_STANDARD_APP(fifo_function)
 					for (x = 0; x < MAX_PRI; x++) {
 						if (fifo_queue_pop_nameval(node->fifo_list[pop_array[x]], "+unique-id", varval, &pop, SWITCH_TRUE) == SWITCH_STATUS_SUCCESS && pop) {
 							cancel_caller_outbound_call(varval, SWITCH_CAUSE_PICKED_OFF);
+							break;
+						}
+						// check for predestined outbound call
+						if (fifo_queue_pop_nameval(node->fifo_list[pop_array[x]], "+dial-uuid", varval, &pop, SWITCH_TRUE) == SWITCH_STATUS_SUCCESS && pop) {
 							break;
 						}
 					}
@@ -4907,7 +4916,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_fifo_extended_load)
 				   "", fifo_track_call_function, "<fifo_outbound_uuid>", SAF_SUPPORT_NOMEDIA);
 	SWITCH_ADD_API(commands_api_interface, "fifo", "Return data about a fifo", fifo_api_function, FIFO_API_SYNTAX);
 	SWITCH_ADD_API(commands_api_interface, "fifo_member", "Add members to a fifo", fifo_member_api_function, FIFO_MEMBER_API_SYNTAX);
-	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo", fifo_add_outbound_function, "<node> <url> [<priority>]");
+	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo", fifo_add_outbound_function, "<node> <url> [<priority>] [uuid]");
 	SWITCH_ADD_API(commands_api_interface, "fifo_check_bridge", "check if uuid is in a bridge", fifo_check_bridge_function, "<uuid>|<outbound_id>");
 	switch_console_set_complete("add fifo list");
 	switch_console_set_complete("add fifo list_verbose");

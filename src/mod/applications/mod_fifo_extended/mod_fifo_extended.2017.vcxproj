@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>mod_fifo_extended</ProjectName>
-    <ProjectGuid>{75DF7F29-2FBF-47F7-B5AF-5B4952DC1ABD}</ProjectGuid>
+    <ProjectGuid>{6C20FA01-ABA1-4F19-A2EC-08573B019EAD}</ProjectGuid>
     <RootNamespace>mod_fifo_extended</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
