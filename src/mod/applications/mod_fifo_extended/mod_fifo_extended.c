@@ -2341,7 +2341,7 @@ static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32
 	switch_mutex_unlock(globals.mutex);
 
 	switch_event_create(&call_event, SWITCH_EVENT_CHANNEL_DATA);
-	switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-url", url);
+	switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM | SWITCH_STACK_NODUP, "dial-url", url);
 	if (uuid) { switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-uuid", uuid); }
 
 	fifo_queue_push(node->fifo_list[priority], call_event);
