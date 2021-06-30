@@ -2342,7 +2342,7 @@ static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32
 
 	switch_event_create(&call_event, SWITCH_EVENT_CHANNEL_DATA);
 	switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-url", url);
-	if (uuid) { switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-uuid", url); }
+	if (uuid) { switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-uuid", uuid); }
 
 	fifo_queue_push(node->fifo_list[priority], call_event);
 	call_event = NULL;
