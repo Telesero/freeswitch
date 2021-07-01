@@ -2364,7 +2364,7 @@ SWITCH_STANDARD_API(fifo_check_bridge_function)
 	return SWITCH_STATUS_SUCCESS;
 }
 
-// fifo_add_outbound <node> <url>[ <call_uuid>][record_template][ <priority>]
+// fifo_add_outbound <node> <url> <call_uuid> [<priority>] [<record_template>]
 SWITCH_STANDARD_API(fifo_add_outbound_function)
 {
 	char *data = NULL, *argv[6] = { 0 };
@@ -2381,18 +2381,19 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 		goto fail;
 	}
 
-	if (argv[4]) {
-		int tmp = atoi(argv[4]);
+	if (argv[3]) {
+		int tmp = atoi(argv[3]);
 		if (tmp > 0) {
 			priority = tmp;
 		}
 	}
 
+	/*
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
 					"FIFO %s new outbound call added, priority== %d, unique-id== %s, dial-url== %s \n", argv[0],
 					priority, argv[2], argv[1]);
-
-	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority, argv[2], argv[3]));
+*/
+	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority, argv[2], argv[4]));
 
 	free(data);
 	return SWITCH_STATUS_SUCCESS;
@@ -3237,8 +3238,9 @@ SWITCH_STANDARD_APP(fifo_function)
 
 				if (switch_ivr_originate(session, &other_session, &cause, url, 120, NULL, NULL, NULL, NULL, NULL, SOF_NONE, NULL, NULL) != SWITCH_STATUS_SUCCESS) {
 					other_session = NULL;
-					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Fifo Originate to [%s] failed, cause: %s\n", url,
-									  switch_channel_cause2str(cause));
+					switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_WARNING,
+									  "Fifo Originate to [%s] failed, dial uuid=[%s], cause: %s\n", 
+										url, url_caller_uuid, switch_channel_cause2str(cause));
 
 					if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 						switch_channel_event_set_data(channel, event);
@@ -3250,7 +3252,7 @@ SWITCH_STANDARD_APP(fifo_function)
 					}
 				} else {
 					caller_uuid = switch_core_session_strdup(session, switch_core_session_get_uuid(other_session));
-					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+					switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_INFO,
 									  "Fifo Originate to [%s] success, dial uuid=[%s], caller uuid=[%s], record template=[%s]\n", url,
 									url_caller_uuid, caller_uuid, url_record_template);
 					if (url_caller_uuid && strcasecmp(url_caller_uuid, caller_uuid)) { caller_uuid = url_caller_uuid; }
@@ -4955,7 +4957,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_fifo_extended_load)
 				   "", fifo_track_call_function, "<fifo_outbound_uuid>", SAF_SUPPORT_NOMEDIA);
 	SWITCH_ADD_API(commands_api_interface, "fifo", "Return data about a fifo", fifo_api_function, FIFO_API_SYNTAX);
 	SWITCH_ADD_API(commands_api_interface, "fifo_member", "Add members to a fifo", fifo_member_api_function, FIFO_MEMBER_API_SYNTAX);
-	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo. Use call_uuid to track if the right call is connected. This is also required when used with fifo_bridge_uuid_wait.", fifo_add_outbound_function, "<node> <url> [<call_uuid>] [record_template] [<priority>]");
+	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo. Use call_uuid to track if the right call is connected. This is also required when used with fifo_bridge_uuid_wait.", fifo_add_outbound_function, "fifo_add_outbound <node> <url> <call_uuid> [<priority>] [<record_template>]");
 	SWITCH_ADD_API(commands_api_interface, "fifo_check_bridge", "check if uuid is in a bridge", fifo_check_bridge_function, "<uuid>|<outbound_id>");
 	switch_console_set_complete("add fifo list");
 	switch_console_set_complete("add fifo list_verbose");
