@@ -3117,7 +3117,7 @@ SWITCH_STANDARD_APP(fifo_function)
 				/* Handle predestined calls, including calls from the ringall strategy */
 				if ((varval = switch_channel_get_variable(channel, "fifo_bridge_uuid"))) {
 					if (switch_true(check_wait) && !strcasecmp(varval, "undef")) {
-						continue;
+						goto after_pop;
 					}
 
 					if (check_bridge_call(varval) && switch_true(check)) {
@@ -3145,7 +3145,7 @@ SWITCH_STANDARD_APP(fifo_function)
 
 							goto done;
 						} else if (switch_true(check_wait)) {
-							continue;
+							goto after_pop;
 						}
 					}
 
@@ -3195,6 +3195,7 @@ SWITCH_STANDARD_APP(fifo_function)
 				}
 			}
 
+			after_pop:
 			if (!pop) {
 				if (!do_wait) {
 					break;
