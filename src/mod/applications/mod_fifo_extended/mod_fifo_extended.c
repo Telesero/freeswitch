@@ -2318,7 +2318,7 @@ static void pres_event_handler(switch_event_t *event)
 	switch_safe_free(dup_node_name);
 }
 
-static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32_t priority, const char *uuid)
+static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32_t priority, const char *uuid, const char *record_template)
 {
 	fifo_node_t *node;
 	switch_event_t *call_event;
@@ -2343,6 +2343,9 @@ static uint32_t fifo_add_outbound(const char *node_name, const char *url, uint32
 	switch_event_create(&call_event, SWITCH_EVENT_CHANNEL_DATA);
 	switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-url", url);
 	if (uuid) { switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-uuid", uuid); }
+	if (record_template) {
+		switch_event_add_header_string(call_event, SWITCH_STACK_BOTTOM, "dial-record-template", record_template);
+	}
 
 	fifo_queue_push(node->fifo_list[priority], call_event);
 	call_event = NULL;
@@ -2361,9 +2364,10 @@ SWITCH_STANDARD_API(fifo_check_bridge_function)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+// fifo_add_outbound <node> <url>[ <call_uuid>][record_template][ <priority>]
 SWITCH_STANDARD_API(fifo_add_outbound_function)
 {
-	char *data = NULL, *argv[5] = { 0 };
+	char *data = NULL, *argv[6] = { 0 };
 	int argc;
 	uint32_t priority = 0;
 
@@ -2377,8 +2381,8 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 		goto fail;
 	}
 
-	if (argv[3]) {
-		int tmp = atoi(argv[3]);
+	if (argv[4]) {
+		int tmp = atoi(argv[4]);
 		if (tmp > 0) {
 			priority = tmp;
 		}
@@ -2388,7 +2392,7 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 					"FIFO %s new outbound call added, priority== %d, unique-id== %s, dial-url== %s \n", argv[0],
 					priority, argv[2], argv[1]);
 
-	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority, argv[2]));
+	stream->write_function(stream, "%d", fifo_add_outbound(argv[0], argv[1], priority, argv[2], argv[3]));
 
 	free(data);
 	return SWITCH_STATUS_SUCCESS;
@@ -3029,6 +3033,7 @@ SWITCH_STANDARD_APP(fifo_function)
 			int x = 0, winner = -1;
 			switch_time_t longest = (0xFFFFFFFFFFFFFFFFULL / 2);
 			uint32_t importance = 0, waiting = 0, most_waiting = 0;
+			const char *url_record_template = NULL;
 
 			pop = NULL;
 
@@ -3205,6 +3210,7 @@ SWITCH_STANDARD_APP(fifo_function)
 
 			url = switch_core_session_strdup(session, switch_event_get_header(pop, "dial-url"));			
 			url_caller_uuid = switch_core_session_strdup(session, switch_event_get_header(pop, "dial-uuid"));
+			url_record_template = switch_core_session_strdup(session, switch_event_get_header(pop, "dial-record-template"));
 			
 			caller_uuid = switch_core_session_strdup(session, switch_event_get_header(pop, "unique-id"));
 			switch_event_destroy(&pop);
@@ -3245,8 +3251,8 @@ SWITCH_STANDARD_APP(fifo_function)
 				} else {
 					caller_uuid = switch_core_session_strdup(session, switch_core_session_get_uuid(other_session));
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
-									  "Fifo Originate to [%s] success, dial uuid=[%s], caller uuid=[%s]\n", url,
-									  url_caller_uuid, caller_uuid);
+									  "Fifo Originate to [%s] success, dial uuid=[%s], caller uuid=[%s], record template=[%s]\n", url,
+									url_caller_uuid, caller_uuid, url_record_template);
 					if (url_caller_uuid && strcasecmp(url_caller_uuid, caller_uuid)) { caller_uuid = url_caller_uuid; }
 					// make sure we have the right session due to loopback
 					other_session = switch_core_session_locate(caller_uuid);
@@ -3286,10 +3292,16 @@ SWITCH_STANDARD_APP(fifo_function)
 				switch_channel_t *other_channel = switch_core_session_get_channel(other_session);
 				switch_caller_profile_t *originator_cp, *originatee_cp;
 				const char *o_announce = NULL;
-				const char *record_template = switch_channel_get_variable(other_channel, "fifo_record_template");
+				const char *record_template;				
 				char *expanded = NULL;
 				char *sql = NULL;
 				long epoch_start, epoch_end;
+
+				if (!url_record_template) {
+					record_template = switch_channel_get_variable(other_channel, "fifo_record_template");
+				} else {
+					record_template = url_record_template;
+				}
 
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					switch_channel_event_set_data(channel, event);
@@ -4943,7 +4955,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_fifo_extended_load)
 				   "", fifo_track_call_function, "<fifo_outbound_uuid>", SAF_SUPPORT_NOMEDIA);
 	SWITCH_ADD_API(commands_api_interface, "fifo", "Return data about a fifo", fifo_api_function, FIFO_API_SYNTAX);
 	SWITCH_ADD_API(commands_api_interface, "fifo_member", "Add members to a fifo", fifo_member_api_function, FIFO_MEMBER_API_SYNTAX);
-	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo. Use call_uuid to track if the right call is connected. This is also required when used with fifo_bridge_uuid_wait.", fifo_add_outbound_function, "<node> <url> [<call_uuid>] [<priority>]");
+	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo. Use call_uuid to track if the right call is connected. This is also required when used with fifo_bridge_uuid_wait.", fifo_add_outbound_function, "<node> <url> [<call_uuid>] [record_template] [<priority>]");
 	SWITCH_ADD_API(commands_api_interface, "fifo_check_bridge", "check if uuid is in a bridge", fifo_check_bridge_function, "<uuid>|<outbound_id>");
 	switch_console_set_complete("add fifo list");
 	switch_console_set_complete("add fifo list_verbose");
