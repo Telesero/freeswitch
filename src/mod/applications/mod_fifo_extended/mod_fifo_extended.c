@@ -2405,10 +2405,100 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread, void *obj)
+{
+	struct call_helper *h = (struct call_helper *) obj;
+
+	switch_core_session_t *session = NULL;
+	switch_channel_t *channel;
+	switch_call_cause_t cause = SWITCH_CAUSE_NONE;
+	switch_caller_extension_t *extension = NULL;
+	char *app_name, *arg = NULL, *originate_string = NULL;
+	switch_event_t *ovars = NULL;
+	switch_status_t status = SWITCH_STATUS_FALSE;
+	switch_event_t *event = NULL;
+	char *expanded_originate_string = NULL;
+
+	if (!globals.running) return NULL;
+
+	switch_mutex_lock(globals.mutex);
+	globals.threads++;
+	switch_mutex_unlock(globals.mutex);
+
+	switch_event_create(&ovars, SWITCH_EVENT_REQUEST_PARAMS);
+	switch_assert(ovars);
+	switch_event_add_header(ovars, SWITCH_STACK_BOTTOM, "originate_timeout", "%d", h->timeout);
+
+	expanded_originate_string = switch_event_expand_headers(ovars, h->originate_string);
+
+	if (switch_stristr("origination_caller", expanded_originate_string)) {
+		originate_string = switch_mprintf("{fifo_name='%q'}%s", h->node_name, expanded_originate_string);
+	} else {
+		originate_string = switch_mprintf("{fifo_name='%q',origination_caller_id_name=Queue,origination_caller_id_number='Queue: %q'}%s",
+																h->node_name, h->node_name, expanded_originate_string);
+	}
+
+	status = switch_ivr_originate(NULL, &session, &cause, originate_string, h->timeout, NULL, NULL, NULL, NULL, ovars, SOF_NONE, NULL, NULL);
+
+	if (status != SWITCH_STATUS_SUCCESS) {
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", h->node_name);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "post-dial");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "failure");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "cause", switch_channel_cause2str(cause));
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "originate_string", originate_string);
+			switch_event_fire(&event);
+		}
+
+		goto end;
+	}
+
+	channel = switch_core_session_get_channel(session);
+
+	if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+		switch_channel_event_set_data(channel, event);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", h->node_name);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "post-dial");
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "success");
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "originate_string", originate_string);
+		switch_event_fire(&event);
+	}
+
+	switch_channel_set_variable(channel, "fifo_bridge_uuid", h->uuid);
+	switch_channel_set_variable(channel, "fifo_predestined_uuid", h->uuid);
+	app_name = "fifo";
+	arg = switch_core_session_sprintf(session, "%s out %s", h->node_name, "nowait");
+	extension = switch_caller_extension_new(session, app_name, arg);
+	switch_caller_extension_add_application(session, extension, app_name, arg);
+	switch_channel_set_caller_extension(channel, extension);
+	switch_channel_set_state(channel, CS_EXECUTE);
+	switch_core_session_rwunlock(session);
+  end:
+
+	if ( originate_string ){
+		switch_safe_free(originate_string);
+	}
+
+	if (expanded_originate_string && expanded_originate_string != h->originate_string) {
+		switch_safe_free(expanded_originate_string);
+	}
+
+	switch_event_destroy(&ovars);
+	switch_core_destroy_memory_pool(&h->pool);
+
+	switch_mutex_lock(globals.mutex);
+	globals.threads--;
+	switch_mutex_unlock(globals.mutex);
+
+	return NULL;
+}
+
 #define FIFO_EXT_ENT_DIAL_SYNTAX "fifo_ext_ent_dial <caller_uuid> <timeout> <url> _!_ [<url>] _!_ [<url>]..."
 SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
 {
-	char *argv[3] = { 0 }, *sql, *data =NULL;
+	char *argv[3] = { 0 }, *sql = NULL, *data =NULL;
 	int argc = 0;
 
 	if (zstr(cmd)) {
@@ -2481,7 +2571,7 @@ SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
 			switch_threadattr_create(&thd_attr, h->pool);
 			switch_threadattr_detach_set(thd_attr, 1);
 			switch_threadattr_stacksize_set(thd_attr, SWITCH_THREAD_STACKSIZE);
-			switch_thread_create(&thread, thd_attr, outbound_enterprise_thread_run, h, h->pool);
+			switch_thread_create(&thread, thd_attr, ext_ent_dial_thread_run, h, h->pool);
 		}
 
 		goto done;
