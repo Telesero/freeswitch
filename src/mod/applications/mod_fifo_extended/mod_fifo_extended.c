@@ -2377,7 +2377,7 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 
 	data = strdup(cmd);
 
-	if ((argc = switch_separate_string(data, ' ', argv, (sizeof(argv) / sizeof(argv[0])))) < 3 || !argv[0]) {
+	if ((argc = switch_separate_string(data, ' ', argv, (sizeof(argv) / sizeof(argv[0])))) < 3 || !argv[0] || !argv[1]) {
 		goto fail;
 	}
 
@@ -2402,6 +2402,97 @@ SWITCH_STANDARD_API(fifo_add_outbound_function)
 
 	free(data);
 	stream->write_function(stream, "0");
+	return SWITCH_STATUS_SUCCESS;
+}
+
+#define FIFO_EXT_ENT_DIAL_SYNTAX "fifo_ext_ent_dial <caller_uuid> <timeout> <url> _!_ [<url>] _!_ [<url>]..."
+SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
+{
+	char *argv[3] = { 0 }, *sql, *data =NULL;
+	int argc = 0;
+
+	if (zstr(cmd)) {
+		goto fail;
+	}
+
+	data = strdup(cmd);
+
+	if ((argc = switch_separate_string(data, ' ', argv, (sizeof(argv) / sizeof(argv[0])))) == 3) {
+		switch_core_session_t *psession = NULL;
+		char *x_argv[8] = { 0 }, *uuid = argv[0], *delim = " _!_ ";
+		char fifo[80] = "";
+		int x_argc = 0, timeout = atoi(argv[1]), i;
+		callback_t cbt = { 0 };
+
+		//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "ent. originate. uuid: %s, timeout: %d\n", uuid, timeout);
+
+		if (zstr(uuid)) {
+			goto fail;
+		}
+
+		if (timeout < 10) {
+			stream->write_function(stream, "-ERR Bad timeout!\n");
+			goto done;
+		}
+
+		if (!(psession = switch_core_session_locate(uuid))) {
+			stream->write_function(stream, "-ERR No caller session!\n");
+			goto done;
+		}
+
+		if (!(x_argc = switch_separate_string_string(argv[2], delim, x_argv, (sizeof(x_argv) / sizeof(x_argv[0]))))) {
+			stream->write_function(stream, "-ERR At least 1 url should be specified!\n");
+			goto done;
+		}
+
+		if (check_bridge_call(uuid)) {
+			stream->write_function(stream, "-ERR Call already answered!\n");
+			goto done;
+		}
+
+		cbt.buf = fifo;
+		cbt.len = sizeof(fifo);
+		cbt.matches = 0;
+		sql = switch_mprintf("select fifo_name from fifo_callers where uuid = '%s'", uuid);
+		fifo_execute_sql_callback(globals.sql_mutex, sql, sql2str_callback, &cbt);
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "place ent org: %s\n", fifo);
+		if (!cbt.matches) {
+			stream->write_function(stream, "-ERR No such caller!\n");
+			goto done;
+		}
+		//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "ent. originate. queue: %s\n", fifo);
+
+		for (i = 0; i < x_argc; i++) {
+			switch_thread_t *thread;
+			switch_threadattr_t *thd_attr = NULL;
+			switch_memory_pool_t *pool;
+			struct call_helper *h;
+
+			//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "place ent org: %s\n", x_argv[i]);
+
+			switch_core_new_memory_pool(&pool);
+			h = switch_core_alloc(pool, sizeof(*h));
+			h->pool = pool;
+			h->uuid = switch_core_strdup(h->pool, uuid);
+			h->node_name = switch_core_strdup(h->pool, fifo);
+			h->originate_string = switch_core_strdup(h->pool, x_argv[i]);
+			h->timeout = timeout;
+
+			switch_threadattr_create(&thd_attr, h->pool);
+			switch_threadattr_detach_set(thd_attr, 1);
+			switch_threadattr_stacksize_set(thd_attr, SWITCH_THREAD_STACKSIZE);
+			switch_thread_create(&thread, thd_attr, outbound_enterprise_thread_run, h, h->pool);
+		}
+
+		goto done;
+	}
+
+	fail:
+	stream->write_function(stream, "-USAGE: %s\n", FIFO_EXT_ENT_DIAL_SYNTAX);
+
+	done:
+	switch_safe_free(sql);
+	switch_safe_free(data);
 	return SWITCH_STATUS_SUCCESS;
 }
 
@@ -4960,6 +5051,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_fifo_extended_load)
 	SWITCH_ADD_API(commands_api_interface, "fifo_member", "Add members to a fifo", fifo_member_api_function, FIFO_MEMBER_API_SYNTAX);
 	SWITCH_ADD_API(commands_api_interface, "fifo_add_outbound", "Add outbound members to a fifo. Use call_uuid to track if the right call is connected. This is also required when used with fifo_bridge_uuid_wait.", fifo_add_outbound_function, "fifo_add_outbound <node> <url> <call_uuid> [<priority>] [<record_template>]");
 	SWITCH_ADD_API(commands_api_interface, "fifo_check_bridge", "check if uuid is in a bridge", fifo_check_bridge_function, "<uuid>|<outbound_id>");
+	SWITCH_ADD_API(commands_api_interface, "fifo_ext_ent_dial", "External enterprise outbound dial", fifo_ext_ent_dial_function, FIFO_EXT_ENT_DIAL_SYNTAX);
 	switch_console_set_complete("add fifo list");
 	switch_console_set_complete("add fifo list_verbose");
 	switch_console_set_complete("add fifo count");
