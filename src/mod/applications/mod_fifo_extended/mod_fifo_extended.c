@@ -2467,6 +2467,7 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 	}
 
 	switch_channel_set_variable(channel, "fifo_bridge_uuid", h->uuid);
+	switch_channel_set_variable(channel, "fifo_bridge_uuid_required", "true");
 	switch_channel_set_variable(channel, "fifo_predestined_uuid", h->uuid);
 	app_name = "fifo";
 	arg = switch_core_session_sprintf(session, "%s out %s", h->node_name, "nowait");
@@ -3118,6 +3119,8 @@ SWITCH_STANDARD_APP(fifo_function)
 		//int do_track = switch_true(track_use_count);
 
 		if (switch_core_event_hook_remove_receive_message(session, messagehook) == SWITCH_STATUS_SUCCESS) {
+			switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "%s stopping messagehook\n",
+							  switch_channel_get_name(channel));
 			dec_use_count(session, NULL);
 			switch_core_event_hook_remove_state_change(session, hanguphook);
 			switch_channel_clear_app_flag_key(FIFO_APP_KEY, channel, FIFO_APP_TRACKING);
