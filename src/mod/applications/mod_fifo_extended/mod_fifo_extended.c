@@ -2957,6 +2957,7 @@ SWITCH_STANDARD_APP(fifo_function)
 		switch_channel_set_variable(channel, "fifo_timestamp", date);
 		switch_channel_set_variable(channel, "fifo_push_timestamp", date);
 		switch_channel_set_variable(channel, "fifo_serviced_uuid", NULL);
+		switch_channel_set_variable(channel, "fifo_serviced_flag", NULL);
 
 		switch_channel_set_app_flag_key(FIFO_APP_KEY, channel, FIFO_APP_BRIDGE_TAG);
 
@@ -2990,6 +2991,7 @@ SWITCH_STANDARD_APP(fifo_function)
 			}
 
 			if ((serviced_uuid = switch_channel_get_variable(channel, "fifo_serviced_uuid"))) {
+				switch_channel_set_variable(channel, "fifo_serviced_flag", "true");
 				break;
 			}
 
@@ -3595,6 +3597,7 @@ SWITCH_STANDARD_APP(fifo_function)
 				switch_channel_set_variable(switch_core_session_get_channel(session), "fifo_bridge_role", "consumer");
 
 				switch_ivr_multi_threaded_bridge(session, other_session, on_dtmf, other_session, session);
+
 
 				if (switch_channel_test_flag(other_channel, CF_TRANSFER) && switch_channel_up(other_channel)) {
 					switch_channel_set_variable(switch_core_session_get_channel(other_session), "fifo_initiated_bridge", NULL);
