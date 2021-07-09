@@ -33,6 +33,10 @@
 
 #include <opusfile.h>
 
+/* this is defined hardcoded in a very ugly way. this is required to compile this module with encoding capabilities */
+/* please see release notes at https://github.com/Telesero/freeswitch/releases for more info. --tamerc */
+#define HAVE_OPUSFILE_ENCODE
+
 #ifdef HAVE_OPUSFILE_ENCODE
 #include <opus/opusenc.h>
 #endif 
@@ -227,7 +231,7 @@ static switch_status_t switch_opusfile_open(switch_file_handle_t *handle, const 
 		context->samplerate = handle->samplerate;
 		handle->seekable = 0;
 		context->comments = ope_comments_create();
-		ope_comments_add(context->comments, "METADATA", "Freeswitch/mod_opusfile");
+		// ope_comments_add(context->comments, "METADATA", "Freeswitch/mod_opusfile");
 		// opus_multistream_surround_encoder_get_size() in libopus will check these
 		if ((context->channels > 2) && (context->channels <= 8)) {
 			mapping_family = 1;
@@ -429,7 +433,7 @@ static switch_status_t switch_opusfile_write(switch_file_handle_t *handle, void 
 	}
 	if (!context->comments) {
 		context->comments = ope_comments_create();
-		ope_comments_add(context->comments, "METADATA", "Freeswitch/mod_opusfile");
+		//ope_comments_add(context->comments, "METADATA", "Freeswitch/mod_opusfile");
 	}
 	if (context->channels > 2) {
 			mapping_family = 1;
