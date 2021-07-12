@@ -25,9 +25,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: clean
-      run: make distclean && make clean
-
     - name: bootstrap
       run: ./bootstrap.sh
       
