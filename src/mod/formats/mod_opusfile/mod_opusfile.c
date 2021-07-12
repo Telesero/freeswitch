@@ -805,6 +805,7 @@ static switch_status_t switch_opusstream_destroy(switch_codec_t *codec)
 
 #ifdef HAVE_OPUSFILE_ENCODE
 	if (context->enc) {
+		ope_encoder_drain(context->enc);
 		ope_encoder_destroy(context->enc);
 	}
 	if (context->comments) {
