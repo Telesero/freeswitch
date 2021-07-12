@@ -34,15 +34,18 @@ jobs:
     - name: make mod_fifo_extended
       run: make mod_fifo_extended
 
+    - name: make mod_opusfile
+      run: make mod_opusfile
+
     - name: Bump version and push tag
       id: changelog
       uses: TriPSs/conventional-changelog-action@v3
       with:
-        version-file: './mod_fifo_extended.json'
+        version-file: './telesero_fs_bundle.json'
         github-token: ${{ secrets.github_token }}
         git-message: 'version bump to: {version}'
         preset: 'angular'
-        tag-prefix: 'mod_fifo_extended-'
+        tag-prefix: 'telesero_fs_bundle-'
         skip-on-empty: 'false'
 
     - name: Create Release
@@ -51,6 +54,8 @@ jobs:
       with:
           name: ${{ steps.changelog.outputs.tag }}
           tag_name: ${{ steps.changelog.outputs.tag }}
-          files: src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
+          files: |
+            src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
+            src/mod/formats/mod_opusfile/.libs/mod_opusfile.so
       env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
