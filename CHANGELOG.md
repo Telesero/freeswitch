@@ -1,3 +1,7 @@
+## [1.0.18](https://github.com/Telesero/freeswitch/compare/mod_fifo_extended-1.0.17...mod_fifo_extended-1.0.18) (2021-07-12)
+
+
+
 ## [1.0.17](https://github.com/Telesero/freeswitch/compare/mod_fifo_extended-1.0.16...mod_fifo_extended-1.0.17) (2021-07-09)
 
 
@@ -11,10 +15,6 @@
 
 
 ## [1.0.14](https://github.com/Telesero/freeswitch/compare/mod_fifo_extended-1.0.13...mod_fifo_extended-1.0.14) (2021-07-07)
-
-
-
-## [1.0.13](https://github.com/Telesero/freeswitch/compare/mod_fifo_extended-1.0.12...mod_fifo_extended-1.0.13) (2021-07-07)
 
 
 
