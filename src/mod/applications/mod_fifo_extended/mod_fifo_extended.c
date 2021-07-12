@@ -625,6 +625,9 @@ static switch_status_t chime_read_frame_callback(switch_core_session_t *session,
 static switch_status_t caller_read_frame_callback(switch_core_session_t *session, switch_frame_t *frame, void *user_data)
 {
 	fifo_chime_data_t *cd = (fifo_chime_data_t *) user_data;
+	if (switch_channel_get_variable(switch_core_session_get_channel(session), "fifo_serviced_uuid")) {
+		return SWITCH_STATUS_BREAK;
+	}
 
 	if (!cd) {
 		return SWITCH_STATUS_SUCCESS;
