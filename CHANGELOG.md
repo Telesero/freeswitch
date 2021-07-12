@@ -1,20 +1,90 @@
-## [1.0.7](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.6...telesero_fs_bundle-1.0.7) (2021-07-12)
-
-
-
-## [1.0.6](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.5...telesero_fs_bundle-1.0.6) (2021-07-12)
-
-
-
-## [1.0.5](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.4...telesero_fs_bundle-1.0.5) (2021-07-12)
-
-
-
-## [1.0.4](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.3...telesero_fs_bundle-1.0.4) (2021-07-12)
-
-
-
 ## [1.0.3](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.2...telesero_fs_bundle-1.0.3) (2021-07-12)
+
+
+
+## [1.0.2](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.1...telesero_fs_bundle-1.0.2) (2021-07-12)
+
+
+
+## [1.0.1](https://github.com/Telesero/freeswitch/compare/70af6013606120b68e86664889b8fdd282535edf...telesero_fs_bundle-1.0.1) (2021-07-12)
+
+
+### Reverts
+
+* Revert "[libvpx] scan-build: Fix "Dereference of null pointer" in vp8_peek_si_internal" ([34fcadb](https://github.com/Telesero/freeswitch/commit/34fcadbd5318da517c67192f32d1f875e705a8ef))
+* Revert "[mod_opusfile] fix play sample rate (don't use original rate, always use 48k), fix eof." ([ebeada6](https://github.com/Telesero/freeswitch/commit/ebeada67d1621a4b869a97041b3e3e74ff136e13))
+* Revert "FS-9490: [mod_sofia] add filter to SIP messages that match a regexp." ([e7dda1b](https://github.com/Telesero/freeswitch/commit/e7dda1b027f251d3441260f3960dd4cf91cb69a5))
+* Revert "FS-11417: [mod_conference] Unbounded memory growth during screen share #resolve" ([cc61f11](https://github.com/Telesero/freeswitch/commit/cc61f11427bbad8b302407c902fe04cd10fa4f91))
+* Revert "FS-11209: [Debian] openssl linking" ([f82e4a5](https://github.com/Telesero/freeswitch/commit/f82e4a5944aef7c379b21a3e11ac54d458865d8a))
+* Revert "FS-11052: Allow alias for crypto suites" ([dc95ee3](https://github.com/Telesero/freeswitch/commit/dc95ee3d669c9c5028ba7ceb26c6b746a36c8717))
+* Revert "FS-11048: [build] support v8 6.6 fixes from Andrey Volk" ([b8b4517](https://github.com/Telesero/freeswitch/commit/b8b4517843ddc5077a5190d6d086c5191dfbf53f))
+* Revert "FS-11057: [mod_conference] CPU race on personal canvas #resolve" ([9140aba](https://github.com/Telesero/freeswitch/commit/9140aba9f9e9a4e64279f9a911dd034fdfe075ec))
+* Revert "FS-11070: [mod_conference] Improve video bridge first two for mux mode -- add support for files playing in this mode #resolve" ([e7dc398](https://github.com/Telesero/freeswitch/commit/e7dc398a1fcf3d1c3678b523f2e24bf67bb9fa62))
+* Revert "FS-11047: [Debian] re-enable mod_v8 package build" ([835063f](https://github.com/Telesero/freeswitch/commit/835063f9d0cb5d826d9307f112fa9d03c51d9330))
+* Revert "FS-10820 [mod_kazoo] eventstream configuration" ([87bb7cb](https://github.com/Telesero/freeswitch/commit/87bb7cb5fb6f9fc2ef288b5c3560a85366acead4))
+* Revert "FS-10770: [freeswitch-core] Make nack buffer bigger by default #resolve" ([420c3ee](https://github.com/Telesero/freeswitch/commit/420c3ee10cd6f5b772ff05d9d8016c4e51603a43))
+* Revert "FS-10237 [mod_callcenter] Do not kick member out on timeout if originating to an agent" ([ec44f5a](https://github.com/Telesero/freeswitch/commit/ec44f5adf27fe0f030627b875e042db3dd5bee0a))
+* Revert "FS-10314: Initial commit adding profiles to mod_callcenter" ([304ddb1](https://github.com/Telesero/freeswitch/commit/304ddb13cbacd189018fdf663314309bd906b638))
+* Revert "FS-10511: Set status as External call when using callcenter_track" ([58d2532](https://github.com/Telesero/freeswitch/commit/58d25329b927211d241122ed90a7c789d558859a))
+* Revert "FS-10416: [mod_commands] add new outbound channels to an in-progress originate" ([5311649](https://github.com/Telesero/freeswitch/commit/53116495d17911a639e6b1d852e6d19e4d712b54))
+* Revert "FS-10299 [mod_callcenter] Removing global lock on all cc_execute_sql functions when executing database queries" ([04854fd](https://github.com/Telesero/freeswitch/commit/04854fddaa1548e5d57a90fad74a433bee7a0750))
+* Revert "FS-10003 small tweak to freeswitch.spec file for improper libilbc2 require %backport=1.6" ([766e713](https://github.com/Telesero/freeswitch/commit/766e713ed070e5ff9fd44411e17c11f4ca6ffdef))
+* Revert "bump build tool and dependency version numbers." ([783b95d](https://github.com/Telesero/freeswitch/commit/783b95d596b3a18b705f26a3baaba003e02a56f4))
+* Revert "FS-9970 build debug Makefile.openbsd until it successfully builds FreeSWITCH. Add additional pkg dependencies. Replace wget with native OpenBSD ftp command" ([73e08c1](https://github.com/Telesero/freeswitch/commit/73e08c17615a295ee75be1ff377b866af7446ece))
+* Revert "FS-9442 #resolve #comment tweak the deb packages to properly install the debug symbols via freeswitch-all-dbg and freeswitch-meta-all-dbg" ([af5271a](https://github.com/Telesero/freeswitch/commit/af5271a3951c600dc92bb50f08e72aac46bd39dc))
+* Revert "FS-8761 #resolve [Memory leak in FreeSWITCH]" ([61c487c](https://github.com/Telesero/freeswitch/commit/61c487c3e8c852765b3a454c523ff3ee1e5a003c))
+* Revert "Fix for FS-9313" ([9e89639](https://github.com/Telesero/freeswitch/commit/9e89639c4d65d38609d01e5429a1da19b2a4beb2))
+* Revert "FS-9303 add CONF_VIDEO_MODE_NONE so we don't default to CONF_VIDEO_MODE_PASSTHROUGH" ([9508370](https://github.com/Telesero/freeswitch/commit/9508370de85b98cc6783f477f0452732db55468a))
+* Revert "FS-9148: add new voicemail.conf.xml param `send-full-vm-header`" ([8a4ad0d](https://github.com/Telesero/freeswitch/commit/8a4ad0da035d8a551eea743b05004ee030bf73e0))
+* Revert "FS-9081 to build all modules for trusty needs the universe components" ([9b1d5c3](https://github.com/Telesero/freeswitch/commit/9b1d5c35f6ba3c5029920c4ce710abe8555940c1))
+* Revert "FS-9081 Correction to e8f83d0" ([bb8960a](https://github.com/Telesero/freeswitch/commit/bb8960a667c8a487fbdc75372ba5f25e4769bacf))
+* Revert "FS-8704: Add min-members, wait-min-members-timeout, wait-mod-timeout, wait-min-members-timeout-message, wait-mod-timeout-message, endconf-mod-exit-message, and endconf-message parameters and functionality to mod_conference." ([ff169d8](https://github.com/Telesero/freeswitch/commit/ff169d8133719d8d219dfda959142301eb246f58))
+* Revert "FS-8720: [core] allow passing in blank/null to session::hangup to mean NORMAL_CLEARING hangup cause instead of segfault" ([4fc4c52](https://github.com/Telesero/freeswitch/commit/4fc4c52392e62e926fdada24f0e4af9004428232))
+* Revert "FS-8713 #resolve avoid read exceeding buffer" ([5de4622](https://github.com/Telesero/freeswitch/commit/5de46227348289590a6eae24f804938753af00f5))
+* Revert "explore use of nuget for wix build dependency" ([cbc23f4](https://github.com/Telesero/freeswitch/commit/cbc23f4db8047a4d50b7c0ff54d38fb67a3ff994))
+* Revert "FS-8369 Debian8/CentOS7 systemd installer additions" ([d9d5870](https://github.com/Telesero/freeswitch/commit/d9d5870bff725688f7a01e009ae8d319e1ffb506))
+* Revert "FS-8369 Debian8/CentOS7 systemd installer additions" ([ebba246](https://github.com/Telesero/freeswitch/commit/ebba2461925d98526dddb32e55f2a0d82ea3d69f))
+* Revert "FS-8369 Fixes" ([5ad6a25](https://github.com/Telesero/freeswitch/commit/5ad6a2533a8e9c3796beaeda7c4d3bd003090f67))
+* Revert "FS-8530 add codecs/mod_sangoma_codec to avoid_mods in debian/bootstrap.sh" ([8012a5b](https://github.com/Telesero/freeswitch/commit/8012a5b72bd059fee2722c1384267471c7fe6905))
+* Revert "FS-8078 - [verto_communicator] fix display flex in safari" ([d7cd5b6](https://github.com/Telesero/freeswitch/commit/d7cd5b6a1e36bb9eae486ea4e9e5638ab652208a))
+* Revert "FS-7917 add check for ipv6 in sofia_glue_create_via" ([351a8ca](https://github.com/Telesero/freeswitch/commit/351a8ca34c390333ced203172368761bc11e0e59))
+* Revert "FS-7669 #resolve now if you don't have the /etc/freeswitch directory, we will install the default packages for you. If you already have this directory, we'll let you deal with your own configs." ([5ab9d46](https://github.com/Telesero/freeswitch/commit/5ab9d466913e2d128c2b2bd73e826b898497114a))
+* Revert "FS-7605 remove surplus config flags" ([c7eb3ab](https://github.com/Telesero/freeswitch/commit/c7eb3abc166d5f7ff9c8d2c9c271d9ba45e2da0e))
+* Revert "FS-7435 change pgsql support to default on, with an option to disable" ([c5d0b63](https://github.com/Telesero/freeswitch/commit/c5d0b63300b3c36a808a70987e392731bbbf1777))
+* Revert "FS-6870 #vs2012 and vs2010 make download of openssl dependent" ([661269a](https://github.com/Telesero/freeswitch/commit/661269a46f768c0507627a6051c80043139afb4a)), closes [#vs2012](https://github.com/Telesero/freeswitch/issues/vs2012)
+* Revert commits pushed too early ([3e8e2ce](https://github.com/Telesero/freeswitch/commit/3e8e2ce151d5d1e33eed3f9ff633ff8ade9d0b97))
+* Revert "fix libpq location detection" ([30283b7](https://github.com/Telesero/freeswitch/commit/30283b7f6bb92f25cbde18760473f441a025263e))
+* Revert "FS-6566" ([575adec](https://github.com/Telesero/freeswitch/commit/575adecf75516ab5abbfb6b5934a54b4b835bdd0))
+* Revert "freetdm: ftmod_wanpipe: Do not attempt to initialize hwdtmf in GSM ports during shutdown" ([ff935bb](https://github.com/Telesero/freeswitch/commit/ff935bb1d95d3a27343aa3798dbe50607731e09b))
+* Revert addition of PERL_GCC_PEDANTIC to CFLAGS ([79a888d](https://github.com/Telesero/freeswitch/commit/79a888de2cd08fbe4c17e697c631daec79d99e99))
+* Revert commit that breaks build on gcc-4.8 ([0274991](https://github.com/Telesero/freeswitch/commit/027499173233a059073046416cb8f834450e3fc5))
+* Revert workaround of gcc-4.6.3-14+rpi1 ARM bug ([dcf633b](https://github.com/Telesero/freeswitch/commit/dcf633b1dde874d44f20617f00dad3108c2e621a))
+* Revert "FS-5708 ... problems with build on this one ([1facd34](https://github.com/Telesero/freeswitch/commit/1facd34bde5986e521abbd28509edd79855c7c6a))
+* Revert "FS-5567 --resolve add a non-error level informational log message when no files match pattern" ([65dcf18](https://github.com/Telesero/freeswitch/commit/65dcf18d5ffd0a17fa101adcf7ccfe62f0a7913b))
+* Revert "FS-5567 --resolve" ([2f48c63](https://github.com/Telesero/freeswitch/commit/2f48c63107fd076b477eb8e1c9ec40e1b903ec91))
+* Revert "fixed stuck mod_rtmp session when the call is killed from fs side, such as using uuid_kill" ([0d5888d](https://github.com/Telesero/freeswitch/commit/0d5888de2f3542285d70f672fde2c1982d4c4dc5))
+* Revert "FS-3996 --resolve stop conference recording when only 1 person left" ([f05b493](https://github.com/Telesero/freeswitch/commit/f05b493367b0f9aa884c725aa10912f5b414fa0b))
+* Revert "Initial draft of message dispatcher system; untested, experimental. Do not enable unless you know what you are doing." Pushing into branch. ([3d0c245](https://github.com/Telesero/freeswitch/commit/3d0c245f80a764d0d3dd06c647e5051a1373e4e3))
+* Revert "for consistency" ([a32244f](https://github.com/Telesero/freeswitch/commit/a32244fe38a5f4811d6487abc66776c9119cf43e))
+* Revert "refs #5684 - make sure we retry all contexts ids if we start at the end of the list" ([5f73d74](https://github.com/Telesero/freeswitch/commit/5f73d7457f2a92edf73750553b6ab983b5e0d43d)), closes [#5684](https://github.com/Telesero/freeswitch/issues/5684)
+* Revert "FreeSWITCH: Fix warn-unused-result error in rtp_common_read()." ([3b5b59e](https://github.com/Telesero/freeswitch/commit/3b5b59e693f5c36568055427ea097c4ba40b4913))
+* Revert "FS-4321 fix startup with odbc" ([9e90bbd](https://github.com/Telesero/freeswitch/commit/9e90bbd12b0278c8ad9e5ceced8d1c771723ce41))
+* Revert "add thread safe hash multi delete function and make callback optional" ([6069ade](https://github.com/Telesero/freeswitch/commit/6069adece54b98eacd9cfbf3306e9d7ca093da72))
+* Revert "Renamed files from megaco* media_gateway*" ([abc1e1e](https://github.com/Telesero/freeswitch/commit/abc1e1e42bafad6c2c428d48db44acb1b81be379))
+* Revert "disable these options if zrtp isn't enabled" ([7e193ed](https://github.com/Telesero/freeswitch/commit/7e193ed3827edf4534bf63167d3fb071a799ec1f))
+* Revert "freeswitch: taking out -Ox cflags and have them replaced with -O0" ([a8e2166](https://github.com/Telesero/freeswitch/commit/a8e21663ce6684eb665dfddfd1757e76ad13a152))
+* Revert "freetdm: fixing default values for ISUP" ([012bc15](https://github.com/Telesero/freeswitch/commit/012bc154b07aec248fe4b91581ba1a5ea1d3f0d9))
+* Revert "mod_spandsp: Remove "-ljpeg -lz" from mod_spandsp_LIBADD" ([0768781](https://github.com/Telesero/freeswitch/commit/0768781e7137c19c1cbcddc6daf0198221c7d204))
+* Revert "mod_fax: Remove -ljpeg, let libtool do its magic." ([7364c1c](https://github.com/Telesero/freeswitch/commit/7364c1c276da8087f40efdaf96efe795955cd9d1))
+* Revert "fs_cli: do not assume that LineInfo buffers are null-terminated" ([0571e81](https://github.com/Telesero/freeswitch/commit/0571e81a4bdb2229bbc39968a1b25268066e324a))
+* Revert "speed up configure" ([82f7741](https://github.com/Telesero/freeswitch/commit/82f77413e9253d468b9f530267fee2edfb3d61ab))
+* Revert "FS-3080 --resolve only allow when not playing message" ([698a502](https://github.com/Telesero/freeswitch/commit/698a50298a93ccac19ec402dfbec995ebf9fbfa2))
+* Revert "switch to switch_cache_db_dismiss_db_handle to reduce odbc" ([612356b](https://github.com/Telesero/freeswitch/commit/612356b7b608e2d128f1af5fea8cbea21d919955))
+* Revert "mod_lcr: use switch_cache_db_dismiss_db_handle to reduce persistant" ([9741086](https://github.com/Telesero/freeswitch/commit/97410869757b9a81ac823df4f441194ba9762553))
+* Revert "Updated the configure script for git builds." ([fdf25d9](https://github.com/Telesero/freeswitch/commit/fdf25d97df83864d895c31dbe258875358ffd589))
+* Revert "Cleanup whitespace" ([4dec160](https://github.com/Telesero/freeswitch/commit/4dec1607ce647ac5b6380fa62fd1efdd16c630ba))
+* Revert "fix compiler warning vs2010" - Jeff is faster than I ([4fd93b0](https://github.com/Telesero/freeswitch/commit/4fd93b0e67ed0a5daf81bd8d4c104515ae1a9df3))
+* Revert "Fix configure ODBC logic" ([70af601](https://github.com/Telesero/freeswitch/commit/70af6013606120b68e86664889b8fdd282535edf))
 
 
 
