@@ -2405,6 +2405,8 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 	switch_caller_extension_t *extension = NULL;
 	char *app_name, *arg = NULL, *originate_string = NULL;
 	switch_event_t *ovars = NULL;
+	switch_event_t *fvars = NULL;
+	char *parsed = NULL;
 	switch_status_t status = SWITCH_STATUS_FALSE;
 	switch_event_t *event = NULL;
 	char *expanded_originate_string = NULL;
@@ -2422,13 +2424,15 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 	expanded_originate_string = switch_event_expand_headers(ovars, h->originate_string);
 
 	if (switch_stristr("origination_caller", expanded_originate_string)) {
-		originate_string = switch_mprintf("{fifo_name='%q'}%s", h->node_name, expanded_originate_string);
+		originate_string = switch_mprintf("{fifo_name='%q',fifo_custom_hangup_check=1}%s", h->node_name, expanded_originate_string);
 	} else {
-		originate_string = switch_mprintf("{fifo_name='%q',origination_caller_id_name=Queue,origination_caller_id_number='Queue: %q'}%s",
+		originate_string = switch_mprintf("{fifo_name='%q',fifo_custom_hangup_check=1,origination_caller_id_name=Queue,origination_caller_id_number='Queue: %q'}%s",
 																h->node_name, h->node_name, expanded_originate_string);
 	}
 
 	status = switch_ivr_originate(NULL, &session, &cause, originate_string, h->timeout, NULL, NULL, NULL, NULL, ovars, SOF_NONE, NULL, NULL);
+
+	//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "originate <%s> resulted in: %s\n", originate_string, switch_channel_cause2str(cause));
 
 	if (status != SWITCH_STATUS_SUCCESS) {
 		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
@@ -2437,7 +2441,28 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "failure");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "cause", switch_channel_cause2str(cause));
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "originate_string", originate_string);
+			if (switch_event_create_brackets(expanded_originate_string, '[', ']', ',', &fvars, &parsed, SWITCH_TRUE) == SWITCH_STATUS_SUCCESS) {
+				switch_event_header_t *hp;
+
+				for (hp = fvars->headers; hp; hp = hp->next) {
+					char buf[1024];
+					char *vvar = NULL;
+
+					vvar = (char *) hp->name;
+					switch_snprintf(buf, sizeof(buf), "variable_%s", vvar);
+
+					if (hp->idx) {
+						int i;
+
+						for(i = 0; i < hp->idx; i++) {
+							switch_event_add_header_string(event, SWITCH_STACK_PUSH, buf, hp->array[i]);
+						}
+					} else {
+						switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, buf, hp->value);
+					}
+				}
+			}
+
 			switch_event_fire(&event);
 		}
 
@@ -2452,7 +2477,6 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "post-dial");
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "success");
-		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "originate_string", originate_string);
 		switch_event_fire(&event);
 	}
 
@@ -2472,11 +2496,18 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 		switch_safe_free(originate_string);
 	}
 
+	if ( parsed ){
+		switch_safe_free(parsed);
+	}
+
 	if (expanded_originate_string && expanded_originate_string != h->originate_string) {
 		switch_safe_free(expanded_originate_string);
 	}
 
 	switch_event_destroy(&ovars);
+	if (fvars) {
+		switch_event_destroy(&fvars);
+	}
 	switch_core_destroy_memory_pool(&h->pool);
 
 	switch_mutex_lock(globals.mutex);
@@ -2499,7 +2530,6 @@ SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
 	data = strdup(cmd);
 
 	if ((argc = switch_separate_string(data, ' ', argv, (sizeof(argv) / sizeof(argv[0])))) == 3) {
-		switch_core_session_t *psession = NULL;
 		char *x_argv[8] = { 0 }, *uuid = argv[0], *delim = " _!_ ";
 		char fifo[80] = "";
 		int x_argc = 0, timeout = atoi(argv[1]), i;
@@ -2516,7 +2546,7 @@ SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
 			goto done;
 		}
 
-		if (!(psession = switch_core_session_locate(uuid))) {
+		if (!switch_ivr_uuid_exists(uuid)) {
 			stream->write_function(stream, "-ERR No caller session!\n");
 			goto done;
 		}
@@ -2565,6 +2595,7 @@ SWITCH_STANDARD_API(fifo_ext_ent_dial_function)
 			switch_thread_create(&thread, thd_attr, ext_ent_dial_thread_run, h, h->pool);
 		}
 
+		stream->write_function(stream, "+OK\n");
 		goto done;
 	}
 
@@ -2777,6 +2808,7 @@ SWITCH_STANDARD_APP(fifo_function)
 	}
 
 	switch_channel_set_variable(channel, "fifo_hangup_check", NULL);
+	switch_channel_set_variable(channel, "fifo_custom_hangup_check", NULL);
 
 	mydata = switch_core_session_strdup(session, data);
 	switch_assert(mydata);
