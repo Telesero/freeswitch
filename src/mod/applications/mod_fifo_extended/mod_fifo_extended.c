@@ -3568,7 +3568,7 @@ SWITCH_STANDARD_APP(fifo_function)
 
 				if (record_template) {
 					expanded = switch_channel_expand_variables(other_channel, record_template);
-					switch_ivr_record_session(session, expanded, 0, NULL);
+					switch_ivr_record_session(other_session, expanded, 0, NULL);
 				}
 
 				switch_core_media_bug_resume(session);
@@ -3704,6 +3704,17 @@ SWITCH_STANDARD_APP(fifo_function)
 				switch_channel_set_variable_printf(other_channel, "fifo_epoch_stop_bridge", "%ld", epoch_end);
 				switch_channel_set_variable_printf(other_channel, "fifo_bridge_seconds", "%d", epoch_end - epoch_start);
 
+				if (switch_channel_ready(channel)) {
+					switch_core_media_bug_pause(session);
+				}
+
+				if (record_template && switch_channel_ready(other_channel)) {
+					switch_ivr_stop_record_session(other_session, expanded);
+					if (expanded != record_template) {
+						switch_safe_free(expanded);
+					}
+				}
+
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					uint64_t tt_usec = 0;
 					switch_channel_event_set_data(channel, event);
@@ -3739,17 +3750,6 @@ SWITCH_STANDARD_APP(fifo_function)
 
 				sql = switch_mprintf("delete from fifo_bridge where consumer_uuid='%q'", switch_core_session_get_uuid(session));
 				fifo_execute_sql_queued(&sql, SWITCH_TRUE, SWITCH_FALSE);
-
-				if (switch_channel_ready(channel)) {
-					switch_core_media_bug_pause(session);
-				}
-
-				if (record_template) {
-					switch_ivr_stop_record_session(session, expanded);
-					if (expanded != record_template) {
-						switch_safe_free(expanded);
-					}
-				}
 
 				ts = switch_micro_time_now();
 				switch_time_exp_lt(&tm, ts);
