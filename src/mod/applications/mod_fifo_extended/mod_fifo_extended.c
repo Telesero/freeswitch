@@ -1179,14 +1179,14 @@ static void do_unbridge(switch_core_session_t *consumer_session, switch_core_ses
 			switch_event_fire(&event);
 		}
 
-		if (caller_channel) {
+/*		if (caller_channel) {
 			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 				switch_channel_event_set_data(caller_channel, event);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", MANUAL_QUEUE_NAME);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "bridge-caller-stop");
 				switch_event_fire(&event);
 			}
-		}
+		}*/
 
 		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 			switch_channel_event_set_data(consumer_channel, event);
@@ -1298,6 +1298,9 @@ static switch_status_t messagehook (switch_core_session_t *session, switch_core_
 				ced_number = cid_number;
 			}
 
+			switch_channel_set_variable(consumer_channel, "fifo_custom_hold_accum", "0");
+			switch_channel_set_variable(consumer_channel, "fifo_custom_on_hold", "0");
+
 			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 				switch_channel_event_set_data(consumer_channel, event);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", MANUAL_QUEUE_NAME);
@@ -1312,12 +1315,12 @@ static switch_status_t messagehook (switch_core_session_t *session, switch_core_
 			}
 
 			if (caller_channel) {
-				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+/*				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					switch_channel_event_set_data(caller_channel, event);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", MANUAL_QUEUE_NAME);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "bridge-caller-start");
 					switch_event_fire(&event);
-				}
+				}*/
 
 				sql = switch_mprintf("insert into fifo_bridge "
 									 "(fifo_name,caller_uuid,caller_caller_id_name,caller_caller_id_number,consumer_uuid,consumer_outgoing_uuid,bridge_start) "
@@ -2413,6 +2416,7 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 	switch_status_t status = SWITCH_STATUS_FALSE;
 	switch_event_t *event = NULL;
 	char *expanded_originate_string = NULL;
+	long epoch_start, epoch_end;
 
 	if (!globals.running) return NULL;
 
@@ -2433,8 +2437,9 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 																h->node_name, h->node_name, expanded_originate_string);
 	}
 
+	epoch_start = (long)switch_epoch_time_now(NULL);
 	status = switch_ivr_originate(NULL, &session, &cause, originate_string, h->timeout, NULL, NULL, NULL, NULL, ovars, SOF_NONE, NULL, NULL);
-
+	epoch_end = (long)switch_epoch_time_now(NULL);
 	//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "originate <%s> resulted in: %s\n", originate_string, switch_channel_cause2str(cause));
 
 	if (status != SWITCH_STATUS_SUCCESS) {
@@ -2442,6 +2447,7 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", h->node_name);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "post-dial");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
+			switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Ring-Time", "%ld", epoch_end - epoch_start);
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "failure");
 			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "cause", switch_channel_cause2str(cause));
 			if (switch_event_create_brackets(expanded_originate_string, '[', ']', ',', &fvars, &parsed, SWITCH_TRUE) == SWITCH_STATUS_SUCCESS) {
@@ -2479,6 +2485,7 @@ static void *SWITCH_THREAD_FUNC ext_ent_dial_thread_run(switch_thread_t *thread,
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", h->node_name);
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "post-dial");
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-UUID", h->uuid);
+		switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Ring-Time", "%ld", epoch_end - epoch_start);
 		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "result", "success");
 		switch_event_fire(&event);
 	}
@@ -2907,6 +2914,7 @@ SWITCH_STANDARD_APP(fifo_function)
 		char tmp[25] = "";
 		int p = 0;
 		int aborted = 0;
+		long push_start, push_end;
 		fifo_chime_data_t cd = { {0} };
 		const char *chime_list = switch_channel_get_variable(channel, "fifo_chime_list");
 		const char *chime_freq = switch_channel_get_variable(channel, "fifo_chime_freq");
@@ -2985,11 +2993,13 @@ SWITCH_STANDARD_APP(fifo_function)
 
 		switch_mutex_unlock(node->update_mutex);
 
+		push_start = (long)switch_epoch_time_now(NULL);
 		ts = switch_micro_time_now();
 		switch_time_exp_lt(&tm, ts);
 		switch_strftime_nocheck(date, &retsize, sizeof(date), "%Y-%m-%d %T", &tm);
 		switch_channel_set_variable(channel, "fifo_status", "WAITING");
 		switch_channel_set_variable(channel, "fifo_timestamp", date);
+		switch_channel_set_variable_printf(channel, "fifo_push_epoch", "%ld", push_start);
 		switch_channel_set_variable(channel, "fifo_push_timestamp", date);
 		switch_channel_set_variable(channel, "fifo_serviced_uuid", NULL);
 		switch_channel_set_variable(channel, "fifo_serviced_flag", NULL);
@@ -3083,14 +3093,17 @@ SWITCH_STANDARD_APP(fifo_function)
 		} else {
 			ts = switch_micro_time_now();
 			switch_time_exp_lt(&tm, ts);
+			push_end = (long)switch_epoch_time_now(NULL);
 			switch_strftime_nocheck(date, &retsize, sizeof(date), "%Y-%m-%d %T", &tm);
 			switch_channel_set_variable(channel, "fifo_status", cd.do_orbit ? "TIMEOUT" : "ABORTED");
 			switch_channel_set_variable(channel, "fifo_timestamp", date);
+			switch_channel_set_variable_printf(channel, "fifo_timeout_sec", "%ld", push_end - push_start);
 
 			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 				switch_channel_event_set_data(channel, event);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", argv[0]);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", cd.do_orbit ? "timeout" : "abort");
+				switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Timeout-Sec", "%ld", push_end - push_start);
 				switch_event_fire(&event);
 			}
 
@@ -3435,7 +3448,8 @@ SWITCH_STANDARD_APP(fifo_function)
 				const char *record_template = switch_channel_get_variable(other_channel, "fifo_record_template");
 				char *expanded = NULL;
 				char *sql = NULL;
-				long epoch_start, epoch_end;
+				long epoch_start, epoch_end, push_start;
+				const char *epoch_push_start_a = NULL;
 
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					switch_channel_event_set_data(channel, event);
@@ -3562,6 +3576,14 @@ SWITCH_STANDARD_APP(fifo_function)
 
 				switch_process_import(session, other_channel, "fifo_caller_consumer_import", switch_channel_get_variable(channel, "fifo_import_prefix"));
 				switch_process_import(other_session, channel, "fifo_consumer_caller_import", switch_channel_get_variable(other_channel, "fifo_import_prefix"));
+				if ((epoch_push_start_a = switch_channel_get_variable(other_channel, "fifo_push_epoch"))) {
+					push_start = atol(epoch_push_start_a);
+					switch_channel_set_variable_printf(channel, "fifo_last_caller_timeout", "%ld", epoch_start - push_start);
+				} else {
+					switch_channel_set_variable(channel, "fifo_last_caller_timeout", NULL);
+				}
+				switch_channel_set_variable(channel, "fifo_custom_hold_accum", "0");
+				switch_channel_set_variable(channel, "fifo_custom_on_hold", "0");
 
 				if (outbound_id) {
 					cancel_consumer_outbound_call(outbound_id, SWITCH_CAUSE_ORIGINATOR_CANCEL);
@@ -3599,12 +3621,12 @@ SWITCH_STANDARD_APP(fifo_function)
 
 					switch_event_fire(&event);
 				}
-				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+/*				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					switch_channel_event_set_data(other_channel, event);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", argv[0]);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "bridge-caller-start");
 					switch_event_fire(&event);
-				}
+				}*/
 
 				add_bridge_call(switch_core_session_get_uuid(other_session));
 				add_bridge_call(switch_core_session_get_uuid(session));
@@ -3659,7 +3681,6 @@ SWITCH_STANDARD_APP(fifo_function)
 				}
 
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
-					uint64_t hold_usec = 0, tt_usec = 0;
 					switch_channel_event_set_data(channel, event);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", arg_fifo_name);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "channel-consumer-stop");
@@ -3668,17 +3689,6 @@ SWITCH_STANDARD_APP(fifo_function)
 						switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Outbound-ID", outbound_id);
 						switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Use-Count", "%d", fifo_get_use_count(outbound_id));
 					}
-					hold_usec = originator_cp->times->hold_accum;
-					tt_usec = (switch_micro_time_now() - originator_cp->times->bridged) - hold_usec;
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Bridge-Time-us", "%"SWITCH_TIME_T_FMT, originator_cp->times->bridged);
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Bridge-Time-ms", "%"SWITCH_TIME_T_FMT, (uint64_t)(originator_cp->times->bridged / 1000));
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Bridge-Time-s", "%"SWITCH_TIME_T_FMT, (uint64_t)(originator_cp->times->bridged / 1000000));
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-us", "%"SWITCH_TIME_T_FMT, tt_usec);
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-ms", "%"SWITCH_TIME_T_FMT, (uint64_t)(tt_usec / 1000));
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-s", "%"SWITCH_TIME_T_FMT, (uint64_t)(tt_usec / 1000000));
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Hold-Time-us", "%"SWITCH_TIME_T_FMT, hold_usec);
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Hold-Time-ms", "%"SWITCH_TIME_T_FMT, (uint64_t)(hold_usec / 1000));
-					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Hold-Time-s", "%"SWITCH_TIME_T_FMT, (uint64_t)(hold_usec / 1000000));
 
 					switch_event_fire(&event);
 				}
@@ -3686,7 +3696,16 @@ SWITCH_STANDARD_APP(fifo_function)
 				del_bridge_call(switch_core_session_get_uuid(session));
 				del_bridge_call(switch_core_session_get_uuid(other_session));
 
+				epoch_end = (long)switch_epoch_time_now(NULL);
+
+				switch_channel_set_variable_printf(channel, "fifo_epoch_stop_bridge", "%ld", epoch_end);
+				switch_channel_set_variable_printf(channel, "fifo_bridge_seconds", "%d", epoch_end - epoch_start);
+
+				switch_channel_set_variable_printf(other_channel, "fifo_epoch_stop_bridge", "%ld", epoch_end);
+				switch_channel_set_variable_printf(other_channel, "fifo_bridge_seconds", "%d", epoch_end - epoch_start);
+
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+					uint64_t tt_usec = 0;
 					switch_channel_event_set_data(channel, event);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", argv[0]);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Action", "bridge-consumer-stop");
@@ -3694,9 +3713,15 @@ SWITCH_STANDARD_APP(fifo_function)
 						switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Outbound-ID", outbound_id);
 						switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Use-Count", "%d", fifo_get_use_count(outbound_id));
 					}
+
+					tt_usec = (switch_micro_time_now() - originator_cp->times->bridged);
+					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-us", "%"SWITCH_TIME_T_FMT, tt_usec);
+					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-ms", "%"SWITCH_TIME_T_FMT, (uint64_t)(tt_usec / 1000));
+					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Consumer-Talk-Time-s", "%"SWITCH_TIME_T_FMT, (uint64_t)(tt_usec / 1000000));
 					switch_event_fire(&event);
 				}
-				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
+				// disabled - no need on custom version
+/*				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, FIFO_EVENT) == SWITCH_STATUS_SUCCESS) {
 					uint64_t hold_usec = 0, tt_usec = 0;
 					switch_channel_event_set_data(other_channel, event);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "FIFO-Name", argv[0]);
@@ -3710,15 +3735,7 @@ SWITCH_STANDARD_APP(fifo_function)
 					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-Hold-Time-ms", "%"SWITCH_TIME_T_FMT, (uint64_t)(hold_usec / 1000));
 					switch_event_add_header(event, SWITCH_STACK_BOTTOM, "FIFO-Caller-Hold-Time-s", "%"SWITCH_TIME_T_FMT, (uint64_t)(hold_usec / 1000000));
 					switch_event_fire(&event);
-				}
-
-				epoch_end = (long)switch_epoch_time_now(NULL);
-
-				switch_channel_set_variable_printf(channel, "fifo_epoch_stop_bridge", "%ld", epoch_end);
-				switch_channel_set_variable_printf(channel, "fifo_bridge_seconds", "%d", epoch_end - epoch_start);
-
-				switch_channel_set_variable_printf(other_channel, "fifo_epoch_stop_bridge", "%ld", epoch_end);
-				switch_channel_set_variable_printf(other_channel, "fifo_bridge_seconds", "%d", epoch_end - epoch_start);
+				}*/
 
 				sql = switch_mprintf("delete from fifo_bridge where consumer_uuid='%q'", switch_core_session_get_uuid(session));
 				fifo_execute_sql_queued(&sql, SWITCH_TRUE, SWITCH_FALSE);
