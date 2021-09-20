@@ -3472,6 +3472,7 @@ SWITCH_STANDARD_APP(fifo_function)
 
 				switch_channel_set_variable(other_channel, "fifo_serviced_by", my_id);
 				switch_channel_set_variable(other_channel, "fifo_serviced_uuid", switch_core_session_get_uuid(session));
+				switch_channel_set_variable(other_channel, "fifo_agent_id", switch_channel_get_variable(channel, "workspace_agent_id"));
 				switch_core_session_flush_private_events(other_session);
 				switch_channel_set_flag_value(other_channel, CF_BREAK, 2);
 				switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "fifo agent %s waiting caller %s \n",
