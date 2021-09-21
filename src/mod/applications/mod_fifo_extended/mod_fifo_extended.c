@@ -3559,6 +3559,7 @@ SWITCH_STANDARD_APP(fifo_function)
 				switch_channel_set_variable_printf(channel, "fifo_epoch_start_bridge", "%ld", epoch_start);
 				switch_channel_set_variable(channel, "fifo_role", "consumer");
 				switch_channel_set_variable(channel, "fifo_conference_transfer", switch_channel_get_variable(other_channel, "fifo_conference_transfer"));
+				switch_channel_set_variable(channel, "fifo_conference_transfer_loopback", switch_channel_get_variable(other_channel, "fifo_conference_transfer_loopback"));
 				switch_channel_set_variable(channel, "fifo_queue_id", switch_channel_get_variable(other_channel, "fifo_queue_id"));
 
 				switch_channel_set_variable(other_channel, "fifo_status", "TALKING");
