@@ -38,7 +38,7 @@
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
 
-int SLICE_SIZE = SWITCH_DEFAULT_VIDEO_SIZE;
+int SLICE_SIZE = (SWITCH_DEFAULT_VIDEO_SIZE + 100);
 
 #define H264_NALU_BUFFER_SIZE 65536
 #define MAX_NALUS 256
@@ -110,7 +110,7 @@ static void dump_encoder_ctx(AVCodecContext *ctx)
 #ifdef DUMP_ENCODER_CTX
 #define STRINGIFY(x) #x
 #define my_dump_int(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = %d\n", ctx->x);
-#define my_dump_int64(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = % " SWITCH_INT64_T_FMT "\n", ctx->x);
+#define my_dump_int64(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = %" SWITCH_INT64_T_FMT "\n", ctx->x);
 #define my_dump_float(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = %f\n", ctx->x);
 #define my_dump_enum(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = %d\n", ctx->x);
 #define my_dump_uint(x) switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN, SWITCH_LOG_ERROR, STRINGIFY(x) " = 0x%x\n", ctx->x);
@@ -385,6 +385,7 @@ typedef struct h264_codec_context_s {
 	switch_image_t *img;
 	switch_image_t *encimg;
 	int need_key_frame;
+	switch_time_t last_keyframe_request;
 	switch_bool_t nalu_28_start;
 
 	int change_bandwidth;
@@ -420,7 +421,7 @@ struct avcodec_globals {
 	int debug;
 	uint32_t max_bitrate;
 	uint32_t rtp_slice_size;
-	uint32_t key_frame_min_freq;
+	uint32_t key_frame_min_freq; // in ms
 	uint32_t enc_threads;
 	uint32_t dec_threads;
 
@@ -1100,6 +1101,8 @@ static switch_status_t consume_h264_bitstream(h264_codec_context_t *context, swi
 	int left = nalu->len - (nalu->eat - nalu->start);
 	uint8_t *p = frame->data;
 	uint8_t start = nalu->start == nalu->eat ? 0x80 : 0;
+	int n = nalu->len / SLICE_SIZE;
+	int slice_size = nalu->len / (n + 1) + 1 + 2;
 
 	if (nalu->len <= SLICE_SIZE) {
 		memcpy(frame->data, nalu->start, nalu->len);
@@ -1119,7 +1122,7 @@ static switch_status_t consume_h264_bitstream(h264_codec_context_t *context, swi
 		return SWITCH_STATUS_SUCCESS;
 	}
 
-	if (left <= (SLICE_SIZE - 2)) {
+	if (left <= (slice_size - 2)) {
 		p[0] = nri | 28; // FU-A
 		p[1] = 0x40 | nalu_type;
 		memcpy(p+2, nalu->eat, left);
@@ -1139,9 +1142,9 @@ static switch_status_t consume_h264_bitstream(h264_codec_context_t *context, swi
 	p[0] = nri | 28; // FU-A
 	p[1] = start | nalu_type;
 	if (start) nalu->eat++;
-	memcpy(p+2, nalu->eat, SLICE_SIZE - 2);
-	nalu->eat += (SLICE_SIZE - 2);
-	frame->datalen = SLICE_SIZE;
+	memcpy(p+2, nalu->eat, slice_size - 2);
+	nalu->eat += (slice_size - 2);
+	frame->datalen = slice_size;
 	frame->m = 0;
 	return SWITCH_STATUS_MORE_DATA;
 }
@@ -1565,10 +1568,14 @@ static switch_status_t switch_h264_encode(switch_codec_t *codec, switch_frame_t 
 
 	avframe->pts = context->pts++;
 
-	if (context->need_key_frame) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG5, "Send AV KEYFRAME\n");
+	if (context->need_key_frame && (context->last_keyframe_request + avcodec_globals.key_frame_min_freq) < switch_time_now()) {
+		if (avcodec_globals.debug) {
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Generate/Send AV KEYFRAME\n");
+		}
+
 		 avframe->pict_type = AV_PICTURE_TYPE_I;
 		 avframe->key_frame = 1;
+		 context->last_keyframe_request = switch_time_now();
 	}
 
 	/* encode the image */
@@ -1583,7 +1590,7 @@ GCC_DIAG_ON(deprecated-declarations)
 		goto error;
 	}
 
-	if (context->need_key_frame) {
+	if (context->need_key_frame && avframe->key_frame == 1) {
 		avframe->pict_type = 0;
 		avframe->key_frame = 0;
 		context->need_key_frame = 0;
@@ -1631,8 +1638,12 @@ GCC_DIAG_ON(deprecated-declarations)
 				context->nalus[i].start = p;
 				context->nalus[i].eat = p;
 
-				if (mod_av_globals.debug && (*p & 0x1f) == 7) {
-					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "KEY FRAME GENERATED\n");
+				if ((*p & 0x1f) == 7) { // Got Keyframe
+					// prevent to generate key frame too frequently
+					context->last_keyframe_request = switch_time_now();
+					if (mod_av_globals.debug) {
+						switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "KEY FRAME GENERATED\n");
+					}
 				}
 			} else {
 				context->nalus[i].len = p - context->nalus[i].start;
@@ -1762,6 +1773,12 @@ static switch_status_t switch_h264_control(switch_codec_t *codec,
 	h264_codec_context_t *context = (h264_codec_context_t *)codec->private_info;
 
 	switch(cmd) {
+	case SCC_DEBUG:
+		{
+			int32_t level = *((uint32_t *) cmd_data);
+			mod_av_globals.debug = level;
+		}
+		break;
 	case SCC_VIDEO_GEN_KEYFRAME:
 		context->need_key_frame = 1;
 		break;
