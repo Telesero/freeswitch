@@ -63,6 +63,5 @@ jobs:
             src/mod/applications/mod_fifo_extended/.libs/mod_fifo_extended.so
             src/mod/formats/mod_opusfile/.libs/mod_opusfile.so
             src/mod/asr_tts/mod_vosk/.libs/mod_vosk.so
-            .libs/libfreeswitch.so.1.0.0
       env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
