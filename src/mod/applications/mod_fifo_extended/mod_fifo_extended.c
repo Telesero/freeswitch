@@ -3064,6 +3064,7 @@ SWITCH_STANDARD_APP(fifo_function)
 		}
 
 		if (!serviced_uuid && switch_channel_ready(channel)) {
+			switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "Hanging up due to no service_uuid set\n");
 			switch_channel_hangup(channel, SWITCH_CAUSE_NORMAL_CLEARING);
 		} else if ((other_session = switch_core_session_locate(serviced_uuid))) {
 			int ready;
@@ -3071,6 +3072,7 @@ SWITCH_STANDARD_APP(fifo_function)
 			ready = switch_channel_ready(other_channel);
 			switch_core_session_rwunlock(other_session);
 			if (!ready) {
+				switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "Hanging up due to channel not ready\n");
 				switch_channel_hangup(channel, SWITCH_CAUSE_NORMAL_CLEARING);
 			}
 		}
