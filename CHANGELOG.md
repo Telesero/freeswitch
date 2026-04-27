@@ -1,3 +1,7 @@
+## [1.0.23](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.22...telesero_fs_bundle-1.0.23) (2026-04-27)
+
+
+
 ## [1.0.22](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.21...telesero_fs_bundle-1.0.22) (2026-04-27)
 
 
@@ -11,10 +15,6 @@
 
 
 ## [1.0.19](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.18...telesero_fs_bundle-1.0.19) (2022-02-01)
-
-
-
-## [1.0.18](https://github.com/Telesero/freeswitch/compare/telesero_fs_bundle-1.0.17...telesero_fs_bundle-1.0.18) (2022-02-01)
 
 
 
